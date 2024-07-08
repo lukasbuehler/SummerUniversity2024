@@ -1,11 +1,20 @@
 #include <cstdlib>
 #include <cstdio>
 #include <iostream>
+#include <cassert>
 
 #include "util.hpp"
 
-// TODO : implement a kernel that reverses a string of length n in place
-// void reverse_string(char* str, int n)
+// a kernel that reverses a string of length n in place
+__global__
+void reverse_string(char* str, int n) {
+    auto i = threadIdx.x;
+    if(i < n/2) {
+        const char tmp_char = str[i];
+        str[i] = str[n - 1 - i];
+        str[n - 1 - i] = tmp_char;
+    }
+}
 
 int main(int argc, char** argv) {
     // check that the user has passed a string to reverse
@@ -22,7 +31,9 @@ int main(int argc, char** argv) {
 
     std::cout << "string to reverse:\n" << string << "\n";
 
-    // TODO : call the string reverse function
+    // call the string reverse function
+    assert(n <= 1024);
+    reverse_string<<<1, n/2>>>(string, n);
 
     // print reversed string
     cudaDeviceSynchronize();

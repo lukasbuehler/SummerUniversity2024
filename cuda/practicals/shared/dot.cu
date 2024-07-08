@@ -13,15 +13,39 @@ double dot_host(const double *x, const double* y, int n) {
     return sum;
 }
 
-// TODO implement dot product kernel
-template <int THREADS>
+// implement dot product kernel
 __global__
-void dot_gpu_kernel(const double *x, const double* y, double *result, int n) {
+void dot_gpu_kernel(const double *x, const double* y, double *result, const int n) {
+    auto i = threadIdx.x + blockIdx.x * blockDim.x;
+
+    extern __shared__ double values[];
+
+
+    // 1. multiply all the corresponding elements to obtain the element wise products
+    if(i < n) {
+        values[i] = x[i] * y[i];
+    }
+
+    // sync all the threads
+    __syncthreads();
+
+    // 2. compute the sum of all the elements.
+    for(int n2 = n; i < n2 / 2; n2 = (n2 + 1) / 2) {
+        values[i] += values[i + (n2 + 1) / 2];
+        __syncthreads();
+    }
+
+    if(i == 0) {
+        *result = values[i];
+    }
 }
 
 double dot_gpu(const double *x, const double* y, int n) {
     static double* result = malloc_managed<double>(1);
-    // TODO call dot product kernel
+    // call dot product kernel
+    const unsigned block_dim = 1024;
+    const unsigned grid_dim = (n + block_dim - 1) / block_dim;
+    dot_gpu_kernel<<<grid_dim, block_dim, n * sizeof(double)>>>(x, y, result, n);
 
     cudaDeviceSynchronize();
     return *result;
