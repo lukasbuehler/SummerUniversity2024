@@ -113,26 +113,31 @@ class Field {
     /////////////////////////////////////////////////
     // helpers for coordinating host-device transfers
     /////////////////////////////////////////////////
-    // TODO : implement the body of update_host() and update_device()
+    // implement the body of update_host() and update_device()
     void update_host() {
-        // TODO: copy contents of device_ptr_ to host_ptr_
+        // copy contents of device_ptr_ to host_ptr_
+        const int size = length() * sizeof(double);
+        auto status = cudaMemcpy(this->host_data(), this->device_data(), size, cudaMemcpyDeviceToHost);
+        if(status != cudaSuccess) {
+            printf("cuda error : %s\n", cudaGetErrorString(status));
+            exit(1);
+        }
     }
 
     void update_device() {
-        // TODO: copy contents of host_ptr_ to device_ptr_ 
+        // copy contents of host_ptr_ to device_ptr_ 
+        const int size = length() * sizeof(double);
+        auto status = cudaMemcpy(this->device_data(), this->host_data(), size, cudaMemcpyHostToDevice);
+        if(status != cudaSuccess) {
+            printf("cuda error : %s\n", cudaGetErrorString(status));
+            exit(1);
+        }
     }
 
     private:
 
-    void allocate(int xdim, int ydim) {
-        xdim_ = xdim;
-        ydim_ = ydim;
-        host_ptr_ = new double[xdim*ydim];
-        cuda_check_status( cudaMalloc(&device_ptr_, xdim*ydim*sizeof(double)) );
-    }
-
     // set to a constant value
-    void fill(double val) {
+    void fill(const double& val) {
         // launch kernel to fill device buffer
         auto const n = xdim_*ydim_;
         auto const thread_dim = 192;
@@ -144,6 +149,14 @@ class Field {
         for(int i=0; i<xdim_*ydim_; ++i)
             host_ptr_[i] = val;
     }
+
+    void allocate(int xdim, int ydim) {
+        xdim_ = xdim;
+        ydim_ = ydim;
+        host_ptr_ = new double[xdim*ydim];
+        cuda_check_status( cudaMalloc(&device_ptr_, xdim*ydim*sizeof(double)) );
+    }
+
 
     void free() {
         if(host_ptr_)   delete[] host_ptr_;

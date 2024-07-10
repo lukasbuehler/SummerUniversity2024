@@ -161,7 +161,9 @@ int main(int argc, char* argv[])
         }
     }
 
-    // TODO : ensure that the gpu copy of x_new has the up to date values that were just created
+    // ensure that the gpu copy of x_new has the up to date values that were just created
+    x_new.update_device();
+    printf("norm: %f\n", ss_norm2(x_new));
 
     flops_bc = 0;
     flops_diff = 0;
@@ -186,6 +188,7 @@ int main(int argc, char* argv[])
             // compute residual : requires both x_new and x_old
             diffusion(x_new, b);
             residual = ss_norm2(b);
+            printf("norm: %f\n", ss_norm2(b));
 
             // check for convergence
             if (residual < tolerance)

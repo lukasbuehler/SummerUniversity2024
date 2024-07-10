@@ -1,0 +1,4 @@
+main
+unit_tests
+*.o
+core*

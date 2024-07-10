@@ -19,15 +19,18 @@ void write_to_file(int nx, int ny, double* data);
 
 __global__
 void diffusion(double *x0, double *x1, int nx, int ny, double dt) {
-// TODO : implement stencil using 2d launch configuration
-// NOTE : i-major ordering, i.e. x[i,j] is indexed at location [i+j*nx]
-//  for(i=1; i<nx-1; ++i) {
-//    for(j=1; j<ny-1; ++j) {
-//        x1[i,j] = x0[i,j] + dt * (-4.*x0[i,j]
-//                   + x0[i,j-1] + x0[i,j+1]
-//                   + x0[i-1,j] + x0[i+1,j]);
-//    }
-//  }
+    // implement stencil using 2d launch configuration
+    // NOTE : i-major ordering, i.e. x[i,j] is indexed at location [i+j*nx]
+    int j = threadIdx.y + blockIdx.y * blockDim.y + 1;
+    int i = threadIdx.x + blockIdx.x * blockDim.x + 1;
+
+    int pos = i + nx * j;
+
+    if(i < nx - 1 && j < ny - 1) {
+        x1[pos] = x0[pos] + dt * (-4. * x0[pos]
+                    + x0[pos - nx] + x0[pos + nx]
+                    + x0[pos - 1] + x0[pos + 1]);
+    }
 }
 
 int main(int argc, char** argv) {
@@ -70,7 +73,10 @@ int main(int argc, char** argv) {
 
     // time stepping loop
     for(auto step=0; step<nsteps; ++step) {
-        // TODO: launch the diffusion kernel in 2D
+        // launch the diffusion kernel in 2D
+        dim3 threads_per_block(16, 16,1);
+        dim3 num_blocks((nx - 2 + threads_per_block.x - 1) / threads_per_block.x, (ny - 2 + threads_per_block.y - 1) / threads_per_block.y,1);
+        diffusion<<<num_blocks, threads_per_block>>>(x0, x1, nx, ny, dt);
 
         std::swap(x0, x1);
     }
